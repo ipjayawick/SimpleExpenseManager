@@ -54,7 +54,7 @@ public class PersistentTransactionDAO implements TransactionDAO {
 
         ContentValues contentValues = new ContentValues();
 
-        contentValues.put("date",dateFormat.format(transaction.getDate()));
+        contentValues.put("date", dateFormat.format(transaction.getDate()));
         contentValues.put("accountNo", transaction.getAccountNo());
         contentValues.put("expenseType", String.valueOf(transaction.getExpenseType()));
         contentValues.put("amount", transaction.getAmount());
