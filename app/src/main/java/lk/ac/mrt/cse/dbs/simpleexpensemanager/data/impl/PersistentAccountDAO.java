@@ -16,6 +16,10 @@
 
 package lk.ac.mrt.cse.dbs.simpleexpensemanager.data.impl;
 
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,11 +34,14 @@ import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.model.ExpenseType;
  * This is an In-Memory implementation of the AccountDAO interface. This is not a persistent storage. A HashMap is
  * used to store the account details temporarily in the memory.
  */
-public class InMemoryAccountDAO implements AccountDAO {
+public class PersistentAccountDAO implements AccountDAO {
     private final Map<String, Account> accounts;
+    private SQLiteDatabase sqlDatabase;
 
-    public InMemoryAccountDAO() {
+    public PersistentAccountDAO(SQLiteDatabase sqlDatabase) {
         this.accounts = new HashMap<>();
+        this.sqlDatabase = sqlDatabase;
+        loadData();
     }
 
     @Override
@@ -59,15 +66,25 @@ public class InMemoryAccountDAO implements AccountDAO {
     @Override
     public void addAccount(Account account) {
         accounts.put(account.getAccountNo(), account);
+
+        ContentValues contentValues = new ContentValues();
+        contentValues.put("accountNo", account.getAccountNo());
+        contentValues.put("bankName", account.getBankName());
+        contentValues.put("accountHolderName", account.getAccountHolderName());
+        contentValues.put("balance", account.getBalance());
+        sqlDatabase.insert("userList", null, contentValues);
     }
 
     @Override
     public void removeAccount(String accountNo) throws InvalidAccountException {
-        if (!accounts.containsKey(accountNo)) {
+        Cursor cursor = sqlDatabase.rawQuery("select * from userList where accountNo = ?", new String[]{accountNo});
+        if (cursor.getCount() > 0) {
+            sqlDatabase.delete("userList", "accountNo=?", new String[]{accountNo});
+            accounts.remove(accountNo);
+        } else {
             String msg = "Account " + accountNo + " is invalid.";
             throw new InvalidAccountException(msg);
         }
-        accounts.remove(accountNo);
     }
 
     @Override
@@ -88,4 +105,18 @@ public class InMemoryAccountDAO implements AccountDAO {
         }
         accounts.put(accountNo, account);
     }
+
+    public void loadData() {
+        Cursor cursor = sqlDatabase.rawQuery("select * from userList", null);
+        while (cursor.moveToNext()) {
+            Account account = new Account(
+                    cursor.getString(0),
+                    cursor.getString(1),
+                    cursor.getString(2),
+                    Double.parseDouble(cursor.getString(3))
+            );
+            accounts.put(account.getAccountNo(), account);
+        }
+    }
 }
+
